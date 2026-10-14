@@ -439,39 +439,54 @@
             mainSubVn.innerText = vnText || "";
         }
 
-        // Tự động tải file Word .docx tiếng Việt
+        // Tự động tải và bóc tách bảng song ngữ từ file Word .docx
         async function loadWordTranslation() {
             try {
                 const response = await fetch('KINH CHÁNH TINH TẤN - EN - VN - lời của nhạc.docx', { cache: 'no-cache' });
                 if (!response.ok) return;
                 
                 const arrayBuffer = await response.arrayBuffer();
-                const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-                parseVietnameseText(result.value);
+                // Sử dụng mammoth để chuyển nội dung docx thành định dạng HTML bảng
+                const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+                parseVietnameseTable(result.value);
             } catch (e) {
                 console.log("Không tải được file docx tiếng Việt:", e);
             }
         }
 
-        function parseVietnameseText(text) {
-            const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-            let vnList = [];
-            for (const l of lines) {
-                if (l.includes('|')) {
-                    const parts = l.split('|');
-                    if (parts.length >= 2) vnList.push(parts[1].trim());
+        // Hàm bóc tách chuẩn cột trái (Anh) và cột phải (Việt) từ bảng HTML của Word
+        function parseVietnameseTable(htmlString) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlString, 'text/html');
+            const rows = doc.querySelectorAll('tr');
+            
+            vietnameseSubtitles = [];
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 2) {
+                    // Cột 1 (index 0) là tiếng Anh, Cột 2 (index 1) là tiếng Việt
+                    const vnText = cells[1].textContent.trim();
+                    if (vnText && vnText !== 'TIẾNG VIỆT' && vnText !== '|') {
+                        vietnameseSubtitles.push(vnText);
+                    }
                 }
+            });
+
+            // Nếu không tìm thấy cấu trúc bảng, dùng phương pháp lọc dòng thông thường
+            if (vietnameseSubtitles.length === 0) {
+                const text = doc.body.textContent || "";
+                const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+                vietnameseSubtitles = lines.filter(l => /[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i.test(l));
             }
-            // Nếu không dùng dấu |, lấy tất cả các dòng chứa tiếng Việt
-            vietnameseSubtitles = vnList.length > 0 ? vnList : lines.filter(l => /[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i.test(l));
 
             if (sentences.length > 0) {
-                sentences.forEach((s, idx) => { s.vnText = vietnameseSubtitles[idx] || ""; });
+                sentences.forEach((s, idx) => {
+                    s.vnText = vietnameseSubtitles[idx] || "";
+                });
                 renderSentencesList();
             }
         }
 
-        // Khởi chạy ứng dụng
         async function initApp() {
             // 1. Đọc file Word tiếng Việt (.docx) trước
             await loadWordTranslation();
@@ -540,8 +555,8 @@
         document.getElementById('docxUpload')?.addEventListener('change', async e => {
             if (e.target.files[0]) {
                 const arrayBuffer = await e.target.files[0].arrayBuffer();
-                const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-                parseVietnameseText(result.value);
+                const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+                parseVietnameseTable(result.value);
             }
         });
 
@@ -623,9 +638,9 @@
                     <input type="checkbox" class="sentence-checkbox" id="chk-${index}">
                     <div class="sentence-number">${index + 1}.</div>
                     <div class="sentence-text">
-                        <div><b>${sentence.text}</b></div>
-                        <div class="sentence-ipa">/${sentence.ipa || ''}/</div>
-                        <div class="sentence-vn" style="color: #0d6efd; margin-top: 3px;">${sentence.vnText || ''}</div>
+                        <div>${sentence.text}</div>
+                        <div class="sentence-ipa">/${sentence.ipa}/</div>
+                        <div class="sentence-vn">${sentence.vnText || ''}</div>
                         <span class="time-badge">⏳ ${formatTime(sentence.start)} - ${formatTime(sentence.end)}</span>
                     </div>
                 `;
@@ -961,7 +976,7 @@
             let currentBlock = {
                 start: sentences[sortedSelected[0]].start,
                 end: sentences[sortedSelected[0]].end,
-                indices: [selectedSelected[0]]
+                indices: [sortedSelected[0]]
             };
 
             for (let i = 1; i < sortedSelected.length; i++) {
@@ -1021,8 +1036,7 @@
                     resetAB();
                 }
             } else {
-                default:
-                    resetAB();
+                resetAB();
             }
         }
 
