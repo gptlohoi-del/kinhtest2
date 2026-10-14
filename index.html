@@ -545,27 +545,44 @@
         });
 
         function processSRT(data) {
-            const blocks = data.replace(/\r/g, '').trim().split(/\n\s*\n/);
-            const parsedData = [];
-            blocks.forEach(block => {
-                const lines = block.split('\n');
-                if (lines.length >= 2) {
-                    const timeLineIdx = lines.findIndex(l => l.includes('-->'));
-                    if (timeLineIdx !== -1) {
-                        const timeMatch = lines[timeLineIdx].match(/(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})/);
-                        if (timeMatch) {
-                            parsedData.push({
-                                start: timeToSeconds(timeMatch[1]),
-                                end: timeToSeconds(timeMatch[2]),
-                                text: lines.slice(timeLineIdx + 1).join(' ').replace(/<[^>]*>?/gm, '').replace(/\[.*?\]/g, '').replace(/>>/g, '').trim()
-                            });
-                        }
+    const blocks = data.replace(/\r/g, '').trim().split(/\n\s*\n/);
+    const parsedData = [];
+    blocks.forEach(block => {
+        const lines = block.split('\n');
+        if (lines.length >= 2) {
+            const timeLineIdx = lines.findIndex(l => l.includes('-->'));
+            if (timeLineIdx !== -1) {
+                const timeMatch = lines[timeLineIdx].match(/(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})/);
+                if (timeMatch) {
+                    // Lấy toàn bộ nội dung từ sau dòng thời gian
+                    const fullText = lines.slice(timeLineIdx + 1).join(' ')
+                        .replace(/<[^>]*>?/gm, '')
+                        .replace(/\[.*?\]/g, '')
+                        .replace(/>>/g, '')
+                        .trim();
+                    
+                    // Nếu trong SRT có phân tách tiếng Anh và tiếng Việt bằng dấu '|' hoặc thẻ <br>
+                    let engPart = fullText;
+                    let vnPart = "";
+                    if (fullText.includes('|')) {
+                        const parts = fullText.split('|');
+                        engPart = parts[0].trim();
+                        vnPart = parts[1].trim();
                     }
+
+                    parsedData.push({
+                        start: timeToSeconds(timeMatch[1]),
+                        end: timeToSeconds(timeMatch[2]),
+                        text: engPart,
+                        vnText: vnPart
+                    });
                 }
-            });
-            sentences = groupSentences(parsedData);
-            renderSentencesList();
+            }
         }
+    });
+    sentences = parsedData;
+    renderSentencesList();
+}
 
         function groupSentences(srtData) {
             let result = [], currentSentence = null;
@@ -608,31 +625,31 @@
         }
 
         function renderSentencesList() {
-            sentencesListDiv.innerHTML = '';
-            selectedSentences = [];
-            isSentenceLoopMode = false;
-            updateFabBadge();
-            
-            sentences.forEach((sentence, index) => {
-                const div = document.createElement('div');
-                div.className = 'sentence-item';
-                div.id = 'sentence-' + index;
-                
-                div.innerHTML = `
-                    <input type="checkbox" class="sentence-checkbox" id="chk-${index}">
-                    <div class="sentence-number">${index + 1}.</div>
-                    <div class="sentence-text">
-                        <div>${sentence.text}</div>
-                        <div class="sentence-ipa">/${sentence.ipa}/</div>
-                        <div class="sentence-vn">${sentence.vnText || ''}</div>
-                        <span class="time-badge">⏳ ${formatTime(sentence.start)} - ${formatTime(sentence.end)}</span>
-                    </div>
-                `;
-                
-                div.onclick = (e) => handleRowClick(index, e);
-                sentencesListDiv.appendChild(div);
-            });
-        }
+    sentencesListDiv.innerHTML = '';
+    selectedSentences = [];
+    isSentenceLoopMode = false;
+    updateFabBadge();
+    
+    sentences.forEach((sentence, index) => {
+        const div = document.createElement('div');
+        div.className = 'sentence-item';
+        div.id = 'sentence-' + index;
+        
+        div.innerHTML = `
+            <input type="checkbox" class="sentence-checkbox" id="chk-${index}">
+            <div class="sentence-number">${index + 1}.</div>
+            <div class="sentence-text">
+                <div><b>${sentence.text}</b></div>
+                <div class="sentence-ipa">/${sentence.ipa || ''}/</div>
+                <div class="sentence-vn" style="color: #0d6efd; margin-top: 3px;">${sentence.vnText || ''}</div>
+                <span class="time-badge">⏳ ${formatTime(sentence.start)} - ${formatTime(sentence.end)}</span>
+            </div>
+        `;
+        
+        div.onclick = (e) => handleRowClick(index, e);
+        sentencesListDiv.appendChild(div);
+    });
+}
 
         function formatTime(seconds) {
             const m = Math.floor(seconds / 60);
