@@ -333,6 +333,7 @@
         <div class="subtitle-display" id="currentSubtitle">
             <div class="subtitle-eng" id="mainSubEng">Đang tải dữ liệu...</div>
             <div class="subtitle-ipa" id="mainSubIpa"></div>
+            <div class="subtitle-vn" id="mainSubVn"></div> <!-- Thêm dòng này vào đây -->
         </div>
 
         <div class="settings-panel">
@@ -407,6 +408,7 @@
         const ipaDict = {};
 
         let sentences = [];
+        let vietnameseSubtitles = []; // <--- Thêm dòng này
         let currentSentenceIndex = -1;
         
         let abState = 0; 
@@ -425,9 +427,12 @@
             });
         }
 
-        function updateMainSubtitle(engText, ipaText) {
-            mainSubEng.innerHTML = engText;
+        function updateMainSubtitle(engText, ipaText, vnText) {
+            mainSubEng.innerHTML = engText || "";
             mainSubIpa.innerText = ipaText ? `/${ipaText}/` : "";
+
+            let vnEl = document.getElementById('mainSubVn');
+            if (vnEl) vnEl.innerText = vnText || ""; // Hiển thị tiếng Việt ở màn hình chính
         }
 
         let vietnameseSubtitles = []; // Mảng chứa lời dịch tiếng Việt
@@ -468,6 +473,38 @@
             }
         }
 
+        async function loadWordTranslation() {
+    try {
+        const response = await fetch('KINH CHÁNH TINH TẤN - EN - VN - lời của nhạc.docx');
+        if (!response.ok) return;
+        const arrayBuffer = await response.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+        parseVietnameseText(result.value);
+    } catch (e) {
+        console.log("Không tải được file docx tiếng Việt:", e);
+    }
+}
+
+function parseVietnameseText(text) {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    let vnList = [];
+    for (const l of lines) {
+        if (l.includes('|')) {
+            const parts = l.split('|');
+            if (parts.length >= 2) vnList.push(parts[1].trim());
+        }
+    }
+    vietnameseSubtitles = vnList.length > 0 ? vnList : lines;
+
+    if (sentences.length > 0) {
+        sentences.forEach((s, idx) => { s.vnText = vietnameseSubtitles[idx] || ""; });
+        renderSentencesList();
+    }
+}
+
+
+
+
         // Khởi chạy tải phụ đề ngay khi cấu trúc HTML sẵn sàng (không đợi MP3 tải xong)
         // Khởi chạy tải phụ đề và IPA ngay khi cấu trúc HTML sẵn sàng
         async function initApp() {
@@ -476,7 +513,7 @@
 
             // 2. Đọc file subtitle.srt
             try {
-                const response = await fetch('subtitle.srt', { cache: 'no-cache' });
+                const ipaRes = await fetch('IPA.txt', { cache: 'no-cache' });
                 if (response.ok) {
                     const text = await response.text();
                     processSRT(text);
@@ -582,6 +619,7 @@
                     
                     if (part.match(/[.!?]["”']?$/)) {
                         currentSentence.ipa = convertSentenceToIPA(currentSentence.text);
+                        currentSentence.vnText = vietnameseSubtitles[result.length] || ""; // Gán tiếng Việt tương ứng
                         result.push({...currentSentence});
                         currentSentence = null;
                     }
@@ -616,6 +654,7 @@
                     <div class="sentence-text">
                         <div>${sentence.text}</div>
                         <div class="sentence-ipa">/${sentence.ipa}/</div>
+                        <div class="sentence-vn">${sentence.vnText || ''}</div>
                         <span class="time-badge">⏳ ${formatTime(sentence.start)} - ${formatTime(sentence.end)}</span>
                     </div>
                 `;
