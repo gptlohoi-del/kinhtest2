@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kinh Chánh Tinh Tấn</title>
     <link rel="manifest" href="./manifest.json">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -52,6 +53,19 @@
             color: #82e0aa;
             font-family: "Lucida Sans Unicode", "Segoe UI", Arial, sans-serif;
             font-weight: normal;
+        }
+
+        .subtitle-vn {
+            font-size: 1.1em;
+            line-height: 1.4;
+            color: #ecf0f1; /* Trắng sáng giống chữ tiếng Anh */
+            font-weight: normal;
+            margin-top: 4px;
+        }
+        .sentence-vn {
+            color: #0d6efd; /* Màu xanh dương nhạt hoặc tùy chỉnh theo ý bạn */
+            font-size: 0.95em;
+            margin-top: 2px;
         }
         .settings-panel {
             background-color: #f8f9fa;
@@ -416,41 +430,66 @@
             mainSubIpa.innerText = ipaText ? `/${ipaText}/` : "";
         }
 
+        let vietnameseSubtitles = []; // Mảng chứa lời dịch tiếng Việt
+
+        async function loadWordTranslation() {
+            try {
+                // Tên file docx của bạn
+                const response = await fetch('KINH CHÁNH TINH TẤN - EN - VN - lời của nhạc.docx');
+                if (!response.ok) return;
+                
+                const arrayBuffer = await response.arrayBuffer();
+                
+                // Sử dụng mammoth.js để trích xuất nội dung từ file docx dưới dạng bảng hoặc HTML
+                const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+                const text = result.value;
+                
+                // Xử lý tách dòng tiếng Việt dựa theo định dạng song ngữ trong file Word của bạn
+                // (Giả định mỗi cặp câu hoặc toàn bộ văn bản được phân tách rõ ràng)
+                const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+                
+                // Lọc lấy các dòng tiếng Việt (thường nằm sau dấu phân cách '|' như trong file docx của bạn)
+                vietnameseSubtitles = lines.filter(l => l.includes('|')).map(l => l.split('|')[1].trim());
+                
+                // Nếu file Word dùng cấu trúc ngắt dòng thông thường, bạn có thể map trực tiếp theo số thứ tự câu
+                if (vietnameseSubtitles.length === 0) {
+                    vietnameseSubtitles = lines; // Fallback lấy tất cả các dòng
+                }
+                
+                // Cập nhật lại giao diện danh sách câu sau khi đã load xong tiếng Việt
+                if (sentences.length > 0) {
+                    sentences.forEach((s, idx) => {
+                        s.vnText = vietnameseSubtitles[idx] || "";
+                    });
+                    renderSentencesList();
+                }
+            } catch (e) {
+                console.log("Chưa tải được file Word tiếng Việt:", e);
+            }
+        }
+
         // Khởi chạy tải phụ đề ngay khi cấu trúc HTML sẵn sàng (không đợi MP3 tải xong)
         // Khởi chạy tải phụ đề và IPA ngay khi cấu trúc HTML sẵn sàng
         async function initApp() {
-            // 1. Đọc file IPA.txt trước để nạp từ điển phiên âm
-            try {
-                const ipaRes = await fetch('IPA.txt', { cache: 'no-cache' });
-                if (ipaRes.ok) {
-                    const ipaText = await ipaRes.text();
-                    const lines = ipaText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-                    for (let i = 0; i < lines.length; i += 2) {
-                        if (i + 1 < lines.length) {
-                            ipaDict[lines[i].toLowerCase()] = lines[i + 1];
-                        }
-                    }
-                }
-            } catch (e) {
-                console.log('Không tìm thấy hoặc chưa tải được IPA.txt');
-            }
+            // 1. Đọc file Word tiếng Việt (.docx) trước
+            await loadWordTranslation();
 
-            // 2. Đọc file subtitle.srt và hiển thị danh sách câu
+            // 2. Đọc file subtitle.srt
             try {
                 const response = await fetch('subtitle.srt', { cache: 'no-cache' });
                 if (response.ok) {
                     const text = await response.text();
                     processSRT(text);
-                    updateMainSubtitle("Đã tự động tải dữ liệu.<br>Bấm Play hoặc chọn câu để nghe.", "");
+                    updateMainSubtitle("Đã tự động tải dữ liệu.<br>Bấm Play hoặc chọn câu để nghe.", "", "");
                 } else {
                     throw new Error("Not found");
                 }
             } catch (error) {
-                updateMainSubtitle("Vui lòng chọn file thủ công.", "");
+                updateMainSubtitle("Vui lòng chọn file thủ công.", "", "");
                 localFallback.style.display = 'block';
             }
 
-            // 3. Tải ngầm audio.mp3 dạng Blob để tua/lặp mượt khi tắt mạng
+            // 3. Tải ngầm audio.mp3
             fetch('audio.mp3')
                 .then(res => res.ok ? res.blob() : Promise.reject())
                 .then(blob => {
@@ -460,7 +499,7 @@
                     media.currentTime = currentTime;
                     if (!wasPaused) media.play();
                 })
-                .catch(() => console.log('Đang dùng nguồn audio mặc định'));
+                .catch(() => {});
         }
 
         if (document.readyState === 'loading') {
@@ -477,11 +516,27 @@
                 const reader = new FileReader();
                 reader.onload = evt => {
                     processSRT(evt.target.result);
-                    updateMainSubtitle("Đã tải phụ đề! Chọn câu bên dưới để nghe.", "");
+                    updateMainSubtitle("Đã tải phụ đề! Chọn câu bên dưới để nghe.", "", "");
                 };
                 reader.readAsText(e.target.files[0]);
             }
         });
+        document.getElementById('docxUpload')?.addEventListener('change', async e => {
+            if (e.target.files[0]) {
+                const arrayBuffer = await e.target.files[0].arrayBuffer();
+                const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+                parseVietnameseText(result.value);
+            }
+        });
+
+
+
+
+
+
+
+
+
 
         function processSRT(data) {
             const blocks = data.replace(/\r/g, '').trim().split(/\n\s*\n/);
