@@ -466,28 +466,7 @@
 
         
 
-        document.getElementById('folderUpload').addEventListener('change', e => handleBatchFiles(e.target.files));
         
-        const dropZone = document.getElementById('dropZone');
-        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.backgroundColor = '#e3f2fd'; });
-        dropZone.addEventListener('dragleave', e => { e.preventDefault(); dropZone.style.backgroundColor = '#fff'; });
-        dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.style.backgroundColor = '#fff'; handleBatchFiles(e.dataTransfer.files); });
-
-        document.getElementById('mediaUpload').addEventListener('change', e => { if (e.target.files[0]) media.src = URL.createObjectURL(e.target.files[0]); });
-        document.getElementById('srtUpload').addEventListener('change', e => {
-            if (e.target.files[0]) {
-                const reader = new FileReader();
-                reader.onload = evt => processSRT(evt.target.result);
-                reader.readAsText(e.target.files[0]);
-            }
-        });
-        document.getElementById('ipaUpload').addEventListener('change', e => {
-            if (e.target.files[0]) {
-                const reader = new FileReader();
-                reader.onload = evt => parseIPAData(evt.target.result);
-                reader.readAsText(e.target.files[0]);
-            }
-        });
 
         function processSRT(data) {
             const blocks = data.replace(/\r/g, '').trim().split(/\n\s*\n/);
