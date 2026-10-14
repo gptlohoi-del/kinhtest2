@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kinh Chánh Tinh Tấn</title>
     <link rel="manifest" href="./manifest.json">
-    <!-- Thư viện mammoth.js để đọc file docx trực tiếp trên trình duyệt -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -23,6 +21,24 @@
             width: 100%;
             box-sizing: border-box;
         }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 8px;
+        }
+        .btn-toggle-local {
+            background-color: #e9ecef;
+            color: #333;
+            border: 1px solid #ced4da;
+            padding: 5px 10px;
+            font-size: 0.8em;
+            border-radius: 4px;
+            cursor: pointer;
+            min-width: unset !important;
+            flex: none !important;
+        }
+        .btn-toggle-local:hover { background-color: #dde2e6; }
         audio {
             width: 100%;
             margin-bottom: 15px;
@@ -95,12 +111,8 @@
             font-weight: bold;
             background-color: #e3f2fd;
         }
-        .sentence-item.selected {
-            background-color: #fff3cd;
-        }
-        .sentence-item.selected.current {
-            background-color: #ffe8a1;
-        }
+        .sentence-item.selected { background-color: #fff3cd; }
+        .sentence-item.selected.current { background-color: #ffe8a1; }
 
         .sentence-checkbox {
             margin-right: 3px;
@@ -128,14 +140,6 @@
             text-align: justify;
             text-justify: inter-word;
         }
-        .sentence-vn {
-            color: #2c3e50;
-            font-size: 0.95em;
-            margin-top: 2px;
-            text-align: justify;
-            text-justify: inter-word;
-            font-weight: normal;
-        }
         .time-badge {
             color: #888;
             font-size: 0.85em;
@@ -153,15 +157,33 @@
             border-left: 4px solid #ffc107;
             padding: 15px;
             margin-bottom: 20px;
-            font-size: 1em;
+            font-size: 0.95em;
             border-radius: 4px;
         }
-        .controls {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+        .local-folder-box {
+            background: #fff;
+            border: 2px dashed #007bff;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            text-align: center;
         }
+        .btn-folder-load {
+            background-color: #28a745 !important;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-block;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        .btn-folder-load:hover { background-color: #218838 !important; }
+        .local-status { font-size: 0.9em; color: #155724; margin-top: 6px; font-weight: bold; }
+        .manual-files-details { margin-top: 10px; font-size: 0.9em; }
+        .manual-files-details summary { cursor: pointer; color: #0056b3; font-weight: bold; }
+
+        .controls { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
         button {
             padding: 12px 20px;
             background-color: #007bff;
@@ -180,7 +202,7 @@
         .btn-secondary { background-color: #6c757d; flex: none; }
         .btn-secondary:hover { background-color: #5a6268; }
 
-        /* --- FLOAT ICON HÌNH HOA SEN SÁT GÓC PHẢI DƯỚI --- */
+        /* --- FAB HOA SEN --- */
         .fab-doc-btn {
             position: fixed;
             bottom: 6px;
@@ -201,13 +223,8 @@
             z-index: 9999;
             transition: transform 0.15s, background-color 0.2s;
         }
-        .fab-doc-btn:active {
-            transform: scale(0.92);
-        }
-        .fab-doc-btn svg {
-            width: 26px;
-            height: 26px;
-        }
+        .fab-doc-btn:active { transform: scale(0.92); }
+        .fab-doc-btn svg { width: 26px; height: 26px; }
         .fab-badge {
             position: absolute;
             top: -4px;
@@ -227,13 +244,10 @@
             box-sizing: border-box;
         }
 
-        /* --- HỘP THOẠI NHẬP SỐ CHỌN NHIỀU CÂU --- */
+        /* --- MODAL --- */
         .range-modal-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0, 0, 0, 0.55);
             z-index: 10000;
             display: none;
@@ -260,12 +274,7 @@
             justify-content: space-between;
             align-items: center;
         }
-        .range-modal p {
-            margin: 0 0 10px 0;
-            font-size: 0.88em;
-            color: #555;
-            line-height: 1.4;
-        }
+        .range-modal p { margin: 0 0 10px 0; font-size: 0.88em; color: #555; line-height: 1.4; }
         .range-input-box {
             width: 100%;
             padding: 10px 12px;
@@ -279,11 +288,7 @@
             letter-spacing: 1px;
             margin-bottom: 10px;
         }
-        .quick-char-bar {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 12px;
-        }
+        .quick-char-bar { display: flex; gap: 6px; margin-bottom: 12px; }
         .quick-char-btn {
             flex: 1;
             min-width: unset !important;
@@ -294,39 +299,20 @@
             border: 1px solid #ced4da !important;
             border-radius: 5px !important;
         }
-        .quick-char-btn:active {
-            background-color: #d3d9df !important;
-        }
-        .range-modal-actions {
-            display: flex;
-            gap: 8px;
-        }
-        .range-modal-actions button {
-            min-width: unset !important;
-            padding: 10px 8px !important;
-            font-size: 0.95em !important;
-        }
-        .btn-apply-loop {
-            background-color: #28a745 !important;
-        }
-        .btn-close-modal {
-            background-color: #6c757d !important;
-            flex: 0.6 !important;
-        }
+        .range-modal-actions { display: flex; gap: 8px; }
+        .range-modal-actions button { min-width: unset !important; padding: 10px 8px !important; font-size: 0.95em !important; }
+        .btn-apply-loop { background-color: #28a745 !important; }
+        .btn-close-modal { background-color: #6c757d !important; flex: 0.6 !important; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2 style="text-align: center; color: #2c3e50;">Kinh Chánh Tinh Tấn</h2>
-        
-        <div class="local-fallback" id="localFallback" style="display:none;">
-            <b>Lưu ý khi mở trên PC:</b> Trình duyệt chặn tự động đọc file cục bộ. Vui lòng chọn file thủ công:
-            <div style="margin-top: 10px;">
-                Chọn file MP3: <input type="file" id="mediaUpload" accept="audio/mp3,audio/*"> <br><br>
-                Chọn file SRT: <input type="file" id="srtUpload" accept=".srt,.txt"> <br><br>
-                Chọn file Word (.docx): <input type="file" id="docxUpload" accept=".docx">
-            </div>
+        <div class="header-bar">
+            <h2 style="color: #2c3e50; margin: 10px 0;">Kinh Chánh Tinh Tấn</h2>
+            
         </div>
+        
+        
 
         <audio id="myMedia" controls src="audio.mp3">
             Trình duyệt không hỗ trợ thẻ audio.
@@ -353,13 +339,10 @@
                 <button class="btn-secondary" onclick="clearSelection()">Xóa tất cả</button>
             </div>
             
-            <div class="sentences-list" id="sentencesList">
-                <!-- Dữ liệu render tại đây -->
-            </div>
+            <div class="sentences-list" id="sentencesList"></div>
         </div>
     </div>
 
-    <!-- Nút Float Icon hình hoa sen sát góc phải dưới -->
     <button class="fab-doc-btn" id="fabQuickSelect" onclick="openRangeModal()" title="Chọn nhanh nhiều câu">
         <span class="fab-badge" id="fabBadge">0</span>
         <svg viewBox="0 0 512 512">
@@ -371,18 +354,14 @@
         </svg>
     </button>
 
-    <!-- Hộp thoại nhập số chọn nhiều câu -->
     <div class="range-modal-overlay" id="rangeModalOverlay" onclick="handleOverlayClick(event)">
         <div class="range-modal">
             <h4>
                 <span>📄 Chọn nhanh câu theo số</span>
                 <span id="totalSentenceHint" style="font-size: 0.85em; color: #007bff;"></span>
             </h4>
-            <p>
-                Nhập câu hoặc khoảng câu (VD: <b>5-10,13,15,20-25</b>).<br>
-                Nhập <b>*</b> hoặc <b>#</b> để chọn tất cả.
-            </p>
-            <input type="tel" inputmode="tel" id="rangeInput" class="range-input-box" placeholder="VD: 5-10,13,15 hoặc *" autocomplete="off">
+            <p>Nhập câu hoặc khoảng câu (VD: <b>5-10,13,15,20-25</b> hoặc <b>*</b>).</p>
+            <input type="tel" inputmode="tel" id="rangeInput" class="range-input-box" placeholder="VD: 5-10,13 hoặc *" autocomplete="off">
             
             <div class="quick-char-bar">
                 <button type="button" class="quick-char-btn" onclick="insertQuickChar('-')"><b>-</b> (Đến)</button>
@@ -406,24 +385,20 @@
         const mainSubVn = document.getElementById('mainSubVn');
         const sentencesListDiv = document.getElementById('sentencesList');
         const localFallback = document.getElementById('localFallback');
+        const localLoadStatus = document.getElementById('localLoadStatus');
         const rangeModalOverlay = document.getElementById('rangeModalOverlay');
         const rangeInput = document.getElementById('rangeInput');
         const fabBadge = document.getElementById('fabBadge');
         const totalSentenceHint = document.getElementById('totalSentenceHint');
         
         const ipaDict = {};
-
         let sentences = [];
-        let vietnameseSubtitles = [];
         let currentSentenceIndex = -1;
         
-        let abState = 0; 
-        let loopA = 0;
-        let loopB = 0;
-        let isABLoopMode = false;
+        let abState = 0; let loopA = 0; let loopB = 0; let isABLoopMode = false;
+        let selectedSentences = []; let isSentenceLoopMode = false;
 
-        let selectedSentences = [];
-        let isSentenceLoopMode = false;
+       
 
         function convertSentenceToIPA(text) {
             if (!text) return "";
@@ -439,88 +414,40 @@
             mainSubVn.innerText = vnText || "";
         }
 
-        // Tự động tải và bóc tách bảng song ngữ từ file Word .docx
-        async function loadWordTranslation() {
-            try {
-                const response = await fetch('KINH CHÁNH TINH TẤN - EN - VN - lời của nhạc.docx', { cache: 'no-cache' });
-                if (!response.ok) return;
-                
-                const arrayBuffer = await response.arrayBuffer();
-                // Sử dụng mammoth để chuyển nội dung docx thành định dạng HTML bảng
-                const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
-                parseVietnameseTable(result.value);
-            } catch (e) {
-                console.log("Không tải được file docx tiếng Việt:", e);
-            }
-        }
-
-        // Hàm bóc tách chuẩn cột trái (Anh) và cột phải (Việt) từ bảng HTML của Word
-        function parseVietnameseTable(htmlString) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlString, 'text/html');
-            const rows = doc.querySelectorAll('tr');
-            
-            vietnameseSubtitles = [];
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length >= 2) {
-                    // Cột 1 (index 0) là tiếng Anh, Cột 2 (index 1) là tiếng Việt
-                    const vnText = cells[1].textContent.trim();
-                    if (vnText && vnText !== 'TIẾNG VIỆT' && vnText !== '|') {
-                        vietnameseSubtitles.push(vnText);
-                    }
+        function parseIPAData(ipaText) {
+            const lines = ipaText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+            for (let i = 0; i < lines.length; i += 2) {
+                if (i + 1 < lines.length) {
+                    ipaDict[lines[i].toLowerCase()] = lines[i + 1];
                 }
-            });
-
-            // Nếu không tìm thấy cấu trúc bảng, dùng phương pháp lọc dòng thông thường
-            if (vietnameseSubtitles.length === 0) {
-                const text = doc.body.textContent || "";
-                const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-                vietnameseSubtitles = lines.filter(l => /[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i.test(l));
             }
-
             if (sentences.length > 0) {
-                sentences.forEach((s, idx) => {
-                    s.vnText = vietnameseSubtitles[idx] || "";
-                });
+                sentences.forEach(s => { s.ipa = convertSentenceToIPA(s.text); });
                 renderSentencesList();
             }
         }
 
         async function initApp() {
-            // 1. Đọc file Word tiếng Việt (.docx) trước
-            await loadWordTranslation();
-
-            // 2. Đọc file IPA.txt
-            try {
-                const ipaRes = await fetch('IPA.txt', { cache: 'no-cache' });
-                if (ipaRes.ok) {
-                    const ipaText = await ipaRes.text();
-                    const lines = ipaText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-                    for (let i = 0; i < lines.length; i += 2) {
-                        if (i + 1 < lines.length) {
-                            ipaDict[lines[i].toLowerCase()] = lines[i + 1];
-                        }
-                    }
-                }
-            } catch (e) {}
-
-            // 3. Đọc file subtitle.srt
-            try {
-                const response = await fetch('subtitle.srt', { cache: 'no-cache' });
-                if (response.ok) {
-                    const text = await response.text();
-                    processSRT(text);
-                    updateMainSubtitle("Đã tự động tải dữ liệu.<br>Bấm Play hoặc chọn câu để nghe.", "", "");
-                } else {
-                    throw new Error("Not found");
-                }
-            } catch (error) {
-                updateMainSubtitle("Vui lòng chọn file thủ công.", "", "");
+            if (window.location.protocol === 'file:') {
                 localFallback.style.display = 'block';
             }
 
-            // 4. Tải ngầm audio.mp3
+            try {
+                const ipaRes = await fetch('IPA.txt', { cache: 'no-cache' });
+                if (ipaRes.ok) parseIPAData(await ipaRes.text());
+            } catch (e) {}
+
+            try {
+                const response = await fetch('subtitle.srt', { cache: 'no-cache' });
+                if (response.ok) {
+                    processSRT(await response.text());
+                    updateMainSubtitle("Đã tự động tải dữ liệu.<br>Bấm Play hoặc chọn câu để nghe.", "", "");
+                } else { throw new Error(); }
+            } catch (error) {
+                updateMainSubtitle("Chế độ chạy trên PC: Hãy bấm 'Nạp file PC' ở trên.", "", "");
+                localFallback.style.display = 'block';
+            }
+
             fetch('audio.mp3')
                 .then(res => res.ok ? res.blob() : Promise.reject())
                 .then(blob => {
@@ -535,28 +462,30 @@
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initApp);
-        } else {
-            initApp();
-        }
+        } else { initApp(); }
 
-        document.getElementById('mediaUpload').addEventListener('change', e => {
-            if (e.target.files[0]) media.src = URL.createObjectURL(e.target.files[0]);
-        });
+        
+
+        document.getElementById('folderUpload').addEventListener('change', e => handleBatchFiles(e.target.files));
+        
+        const dropZone = document.getElementById('dropZone');
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.backgroundColor = '#e3f2fd'; });
+        dropZone.addEventListener('dragleave', e => { e.preventDefault(); dropZone.style.backgroundColor = '#fff'; });
+        dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.style.backgroundColor = '#fff'; handleBatchFiles(e.dataTransfer.files); });
+
+        document.getElementById('mediaUpload').addEventListener('change', e => { if (e.target.files[0]) media.src = URL.createObjectURL(e.target.files[0]); });
         document.getElementById('srtUpload').addEventListener('change', e => {
             if (e.target.files[0]) {
                 const reader = new FileReader();
-                reader.onload = evt => {
-                    processSRT(evt.target.result);
-                    updateMainSubtitle("Đã tải phụ đề! Chọn câu bên dưới để nghe.", "", "");
-                };
+                reader.onload = evt => processSRT(evt.target.result);
                 reader.readAsText(e.target.files[0]);
             }
         });
-        document.getElementById('docxUpload')?.addEventListener('change', async e => {
+        document.getElementById('ipaUpload').addEventListener('change', e => {
             if (e.target.files[0]) {
-                const arrayBuffer = await e.target.files[0].arrayBuffer();
-                const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
-                parseVietnameseTable(result.value);
+                const reader = new FileReader();
+                reader.onload = evt => parseIPAData(evt.target.result);
+                reader.readAsText(e.target.files[0]);
             }
         });
 
@@ -570,52 +499,27 @@
                     if (timeLineIdx !== -1) {
                         const timeMatch = lines[timeLineIdx].match(/(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})/);
                         if (timeMatch) {
+                            const fullText = lines.slice(timeLineIdx + 1).join(' ').replace(/<[^>]*>?/gm, '').trim();
+                            let engPart = fullText;
+                            let vnPart = "";
+                            if (fullText.includes('|')) {
+                                const parts = fullText.split('|');
+                                engPart = parts[0].trim();
+                                vnPart = parts[1].trim();
+                            }
                             parsedData.push({
                                 start: timeToSeconds(timeMatch[1]),
                                 end: timeToSeconds(timeMatch[2]),
-                                text: lines.slice(timeLineIdx + 1).join(' ').replace(/<[^>]*>?/gm, '').replace(/\[.*?\]/g, '').replace(/>>/g, '').trim()
+                                text: engPart,
+                                vnText: vnPart,
+                                ipa: convertSentenceToIPA(engPart)
                             });
                         }
                     }
                 }
             });
-            sentences = groupSentences(parsedData);
+            sentences = parsedData;
             renderSentencesList();
-        }
-
-        function groupSentences(srtData) {
-            let result = [], currentSentence = null;
-            for (let i = 0; i < srtData.length; i++) {
-                let text = srtData[i].text.replace(/\n/g, ' ').trim();
-                if (!text) continue;
-
-                let parts = text.match(/.*?[.!?]+(?:\s|$)|.+/g) || [text];
-
-                for (let j = 0; j < parts.length; j++) {
-                    let part = parts[j].trim();
-                    if (!part) continue;
-
-                    if (!currentSentence) {
-                        currentSentence = { start: srtData[i].start, end: srtData[i].end, text: part };
-                    } else {
-                        currentSentence.end = srtData[i].end;
-                        currentSentence.text += " " + part;
-                    }
-                    
-                    if (part.match(/[.!?]["”']?$/)) {
-                        currentSentence.ipa = convertSentenceToIPA(currentSentence.text);
-                        currentSentence.vnText = vietnameseSubtitles[result.length] || "";
-                        result.push({...currentSentence});
-                        currentSentence = null;
-                    }
-                }
-            }
-            if (currentSentence) {
-                currentSentence.ipa = convertSentenceToIPA(currentSentence.text);
-                currentSentence.vnText = vietnameseSubtitles[result.length] || "";
-                result.push(currentSentence);
-            }
-            return result;
         }
 
         function timeToSeconds(timeStr) {
@@ -640,7 +544,6 @@
                     <div class="sentence-text">
                         <div>${sentence.text}</div>
                         <div class="sentence-ipa">/${sentence.ipa}/</div>
-                        
                         <span class="time-badge">⏳ ${formatTime(sentence.start)} - ${formatTime(sentence.end)}</span>
                     </div>
                 `;
@@ -660,16 +563,12 @@
             if (selectedSentences.length > 0) {
                 fabBadge.style.display = 'flex';
                 fabBadge.innerText = selectedSentences.length;
-            } else {
-                fabBadge.style.display = 'none';
-            }
+            } else { fabBadge.style.display = 'none'; }
         }
 
         function handleRowClick(index, event) {
             const chk = document.getElementById('chk-' + index);
-            if (event.target.type !== 'checkbox') {
-                chk.checked = !chk.checked;
-            }
+            if (event.target.type !== 'checkbox') { chk.checked = !chk.checked; }
             
             const isChecked = chk.checked;
             const idxInArr = selectedSentences.indexOf(index);
@@ -684,62 +583,43 @@
             
             selectedSentences.sort((a, b) => a - b);
             updateFabBadge();
-            
-            if (isSentenceLoopMode && selectedSentences.length === 0) {
-                stopSentenceLoop();
+
+            if (sentences[index]) {
+                currentSentenceIndex = index;
+                updateMainSubtitle(sentences[index].text, sentences[index].ipa, sentences[index].vnText);
+                updateHighlight(index);
             }
+            
+            if (isSentenceLoopMode && selectedSentences.length === 0) { stopSentenceLoop(); }
         }
 
-        // --- CHỨC NĂNG CHỌN NHANH BẰNG BÀN PHÍM SỐ ĐIỆN THOẠI ---
         function formatSelectedToRangeString() {
             if (selectedSentences.length === 0) return "";
             if (sentences.length > 0 && selectedSentences.length === sentences.length) return "*";
-            
             let sorted = [...selectedSentences].sort((a, b) => a - b).map(i => i + 1);
-            let parts = [];
-            let start = sorted[0], prev = sorted[0];
-
+            let parts = []; let start = sorted[0], prev = sorted[0];
             for (let i = 1; i < sorted.length; i++) {
-                if (sorted[i] === prev + 1) {
-                    prev = sorted[i];
-                } else {
-                    parts.push(start === prev ? `${start}` : `${start}-${prev}`);
-                    start = prev = sorted[i];
-                }
+                if (sorted[i] === prev + 1) { prev = sorted[i]; } 
+                else { parts.push(start === prev ? `${start}` : `${start}-${prev}`); start = prev = sorted[i]; }
             }
             parts.push(start === prev ? `${start}` : `${start}-${prev}`);
             return parts.join(',');
         }
 
         function openRangeModal() {
-            if (sentences.length === 0) {
-                alert("Chưa có dữ liệu câu phụ đề!");
-                return;
-            }
+            if (sentences.length === 0) { alert("Chưa có dữ liệu câu phụ đề!"); return; }
             totalSentenceHint.innerText = `(Tổng: ${sentences.length} câu)`;
             rangeInput.value = formatSelectedToRangeString();
             rangeModalOverlay.style.display = 'flex';
-            setTimeout(() => {
-                rangeInput.focus();
-                rangeInput.select();
-            }, 50);
+            setTimeout(() => { rangeInput.focus(); rangeInput.select(); }, 50);
         }
 
-        function closeRangeModal() {
-            rangeModalOverlay.style.display = 'none';
-            rangeInput.blur();
-        }
-
-        function handleOverlayClick(e) {
-            if (e.target === rangeModalOverlay) {
-                closeRangeModal();
-            }
-        }
+        function closeRangeModal() { rangeModalOverlay.style.display = 'none'; rangeInput.blur(); }
+        function handleOverlayClick(e) { if (e.target === rangeModalOverlay) closeRangeModal(); }
 
         function insertQuickChar(ch) {
-            if (ch === '*') {
-                rangeInput.value = '*';
-            } else {
+            if (ch === '*') { rangeInput.value = '*'; } 
+            else {
                 const startPos = rangeInput.selectionStart || rangeInput.value.length;
                 const endPos = rangeInput.selectionEnd || rangeInput.value.length;
                 const val = rangeInput.value;
@@ -749,31 +629,20 @@
             rangeInput.focus();
         }
 
-        function clearRangeInput() {
-            rangeInput.value = '';
-            rangeInput.focus();
-        }
+        function clearRangeInput() { rangeInput.value = ''; rangeInput.focus(); }
 
         rangeInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                applyRangeSelection(false);
-            }
+            if (e.key === 'Enter') { e.preventDefault(); applyRangeSelection(false); }
         });
 
         function parseRangeString(inputStr, maxCount) {
             const raw = inputStr.trim();
             if (!raw) return [];
-
             if (raw.includes('*') || raw.includes('#')) {
-                const all = [];
-                for (let i = 0; i < maxCount; i++) all.push(i);
-                return all;
+                const all = []; for (let i = 0; i < maxCount; i++) all.push(i); return all;
             }
-
             const resultSet = new Set();
             const tokens = raw.split(/[,;.\s]+/);
-
             tokens.forEach(token => {
                 if (!token) return;
                 if (token.includes('-')) {
@@ -781,31 +650,24 @@
                     if (rangeParts.length >= 2 && !isNaN(rangeParts[0]) && !isNaN(rangeParts[1])) {
                         const startNum = Math.max(1, Math.min(rangeParts[0], rangeParts[1]));
                         const endNum = Math.min(maxCount, Math.max(rangeParts[0], rangeParts[1]));
-                        for (let n = startNum; n <= endNum; n++) {
-                            resultSet.add(n - 1);
-                        }
+                        for (let n = startNum; n <= endNum; n++) resultSet.add(n - 1);
                     }
                 } else {
                     const num = parseInt(token, 10);
-                    if (!isNaN(num) && num >= 1 && num <= maxCount) {
-                        resultSet.add(num - 1);
-                    }
+                    if (!isNaN(num) && num >= 1 && num <= maxCount) resultSet.add(num - 1);
                 }
             });
-
             return Array.from(resultSet).sort((a, b) => a - b);
         }
 
         function applyRangeSelection(startLoopImmediately) {
             const indices = parseRangeString(rangeInput.value, sentences.length);
-            
             selectedSentences = [];
             document.querySelectorAll('.sentence-item').forEach(item => {
                 item.classList.remove('selected');
                 const chk = item.querySelector('input[type="checkbox"]');
                 if (chk) chk.checked = false;
             });
-
             selectedSentences = indices;
             selectedSentences.forEach(idx => {
                 const itemEl = document.getElementById('sentence-' + idx);
@@ -813,7 +675,6 @@
                 if (itemEl) itemEl.classList.add('selected');
                 if (chkEl) chkEl.checked = true;
             });
-
             updateFabBadge();
             closeRangeModal();
 
@@ -834,29 +695,19 @@
                     btn.innerText = "🛑 Đang lặp (Bấm để Dừng)";
                     media.currentTime = sentences[selectedSentences[0]].start;
                     media.play();
-                } else {
-                    stopSentenceLoop();
-                }
-            } else if (isSentenceLoopMode && selectedSentences.length === 0) {
-                stopSentenceLoop();
-            }
+                } else { stopSentenceLoop(); }
+            } else if (isSentenceLoopMode && selectedSentences.length === 0) { stopSentenceLoop(); }
         }
 
         function toggleSentenceLoop() {
-            if (isSentenceLoopMode) {
-                stopSentenceLoop();
-            } else {
-                if (selectedSentences.length === 0) {
-                    alert("Vui lòng tích chọn ít nhất 1 câu ở danh sách bên dưới!");
-                    return;
-                }
+            if (isSentenceLoopMode) { stopSentenceLoop(); } 
+            else {
+                if (selectedSentences.length === 0) { alert("Vui lòng tích chọn ít nhất 1 câu!"); return; }
                 if (isABLoopMode) resetAB();
-                
                 isSentenceLoopMode = true;
                 const btn = document.getElementById('btnToggleLoop');
                 btn.classList.add('active');
                 btn.innerText = "🛑 Đang lặp (Bấm để Dừng)";
-                
                 media.currentTime = sentences[selectedSentences[0]].start;
                 media.play();
             }
@@ -880,44 +731,26 @@
             if (isSentenceLoopMode) stopSentenceLoop();
         }
 
-        // --- LOGIC CẬP NHẬT THỜI GIAN CHÍNH ---
         media.addEventListener('timeupdate', () => {
             const currentTime = media.currentTime;
             
             if (isSentenceLoopMode && selectedSentences.length > 0) {
                 let blocks = getAllContinuousBlocks();
-                
-                let currentBlock = null;
-                let currentBlockIdx = -1;
-                
+                let currentBlock = null; let currentBlockIdx = -1;
                 for (let i = 0; i < blocks.length; i++) {
                     let b = blocks[i];
                     if (currentTime >= b.start - 0.3 && currentTime <= b.end + 0.05) {
-                        currentBlock = b;
-                        currentBlockIdx = i;
-                        break;
+                        currentBlock = b; currentBlockIdx = i; break;
                     }
                 }
-
                 if (!currentBlock) {
                     let nextBlock = blocks.find(b => b.start > currentTime);
-                    if (nextBlock) {
-                        media.currentTime = nextBlock.start;
-                        media.play();
-                        return;
-                    } else {
-                        media.currentTime = blocks[0].start;
-                        media.play();
-                        return;
-                    }
+                    media.currentTime = nextBlock ? nextBlock.start : blocks[0].start;
+                    media.play(); return;
                 }
-
                 let foundIdx = -1;
                 for (let idx of currentBlock.indices) {
-                    if (currentTime >= sentences[idx].start && currentTime <= sentences[idx].end) {
-                        foundIdx = idx;
-                        break;
-                    }
+                    if (currentTime >= sentences[idx].start && currentTime <= sentences[idx].end) { foundIdx = idx; break; }
                 }
                 if (foundIdx === -1) foundIdx = currentBlock.indices[0];
 
@@ -928,71 +761,43 @@
                 }
 
                 if (currentTime >= currentBlock.end - 0.05) {
-                    if (currentBlockIdx < blocks.length - 1) {
-                        media.currentTime = blocks[currentBlockIdx + 1].start;
-                        media.play();
-                    } else {
-                        media.currentTime = blocks[0].start;
-                        media.play();
-                    }
+                    media.currentTime = (currentBlockIdx < blocks.length - 1) ? blocks[currentBlockIdx + 1].start : blocks[0].start;
+                    media.play();
                 }
-                
                 return; 
             }
 
-            if (isABLoopMode && abState === 2) {
-                if (currentTime >= loopB) {
-                    media.currentTime = loopA;
-                }
-            }
+            if (isABLoopMode && abState === 2 && currentTime >= loopB) { media.currentTime = loopA; }
             
             let foundIndex = -1;
             for (let i = 0; i < sentences.length; i++) {
-                if (currentTime >= sentences[i].start && currentTime <= sentences[i].end) {
-                    foundIndex = i;
-                    break;
-                }
+                if (currentTime >= sentences[i].start && currentTime <= sentences[i].end) { foundIndex = i; break; }
             }
 
             if (foundIndex !== -1) {
                 if (currentSentenceIndex !== foundIndex) {
                     currentSentenceIndex = foundIndex;
-                    updateMainSubtitle(sentences[foundIndex].text, sentences[foundIndex].ipa, sentences[foundIndex].vnText);
+                    updateMainSubtitle(sentences[foundIndex].text, sentences[foundIndex].ipa, sentences[FoundIndex = foundIndex].vnText);
                     updateHighlight(foundIndex);
                 }
             } else {
-                if (!media.paused && !isSentenceLoopMode) {
-                    updateMainSubtitle("♪ ♪ ♪", "", "");
-                    updateHighlight(-1);
-                }
+                if (!media.paused && !isSentenceLoopMode) { updateMainSubtitle("♪ ♪ ♪", "", ""); updateHighlight(-1); }
             }
         });
 
         function getAllContinuousBlocks() {
             if (selectedSentences.length === 0) return [];
             let sortedSelected = [...selectedSentences].sort((a, b) => a - b);
-            
             let blocks = [];
-            let currentBlock = {
-                start: sentences[sortedSelected[0]].start,
-                end: sentences[sortedSelected[0]].end,
-                indices: [sortedSelected[0]]
-            };
-
+            let currentBlock = { start: sentences[sortedSelected[0]].start, end: sentences[sortedSelected[0]].end, indices: [sortedSelected[0]] };
             for (let i = 1; i < sortedSelected.length; i++) {
-                let prevIdx = sortedSelected[i - 1];
-                let currIdx = sortedSelected[i];
-                
+                let prevIdx = sortedSelected[i - 1]; let currIdx = sortedSelected[i];
                 if (currIdx === prevIdx + 1) {
                     currentBlock.end = sentences[currIdx].end;
                     currentBlock.indices.push(currIdx);
                 } else {
                     blocks.push(currentBlock);
-                    currentBlock = {
-                        start: sentences[currIdx].start,
-                        end: sentences[currIdx].end,
-                        indices: [currIdx]
-                    };
+                    currentBlock = { start: sentences[currIdx].start, end: sentences[currIdx].end, indices: [currIdx] };
                 }
             }
             blocks.push(currentBlock);
@@ -1007,8 +812,7 @@
                     el.classList.add('current');
                     if(!media.paused) {
                         const container = document.getElementById('sentencesList');
-                        const scrollPos = el.offsetTop - container.offsetTop - (container.clientHeight / 2) + (el.clientHeight / 2);
-                        container.scrollTop = scrollPos;
+                        container.scrollTop = el.offsetTop - container.offsetTop - (container.clientHeight / 2) + (el.clientHeight / 2);
                     }
                 }
             }
@@ -1017,44 +821,25 @@
         function handleABClick() {
             const btn = document.getElementById('btnAB');
             if (abState === 0) {
-                loopA = media.currentTime;
-                abState = 1;
+                loopA = media.currentTime; abState = 1;
                 btn.innerText = `[ A-B ] (${formatTime(loopA)}) - Bấm lấy B`;
-                btn.style.backgroundColor = "#ffc107";
-                btn.style.color = "#000";
+                btn.style.backgroundColor = "#ffc107"; btn.style.color = "#000";
             } else if (abState === 1) {
                 loopB = media.currentTime;
                 if (loopB > loopA) {
-                    abState = 2;
-                    isABLoopMode = true;
+                    abState = 2; isABLoopMode = true;
                     btn.innerText = `[ A-B ] Lặp: ${formatTime(loopA)} ⟷ ${formatTime(loopB)} (Tắt)`;
-                    btn.style.backgroundColor = "#28a745";
-                    btn.style.color = "#fff";
+                    btn.style.backgroundColor = "#28a745"; btn.style.color = "#fff";
                     if (isSentenceLoopMode) stopSentenceLoop();
-                } else {
-                    alert("Mốc B phải sau mốc A!");
-                    resetAB();
-                }
-            } else {
-                resetAB();
-            }
+                } else { alert("Mốc B phải sau mốc A!"); resetAB(); }
+            } else { resetAB(); }
         }
 
         function resetAB() {
-            abState = 0;
-            isABLoopMode = false;
+            abState = 0; isABLoopMode = false;
             const btn = document.getElementById('btnAB');
             btn.innerText = "[ A-B ] Bấm vào đây để đặt mốc A";
-            btn.style.backgroundColor = "#007bff";
-            btn.style.color = "#fff";
-        }
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(() => console.log('Đã lưu Offline!'))
-                    .catch(err => console.log('Lỗi:', err));
-            });
+            btn.style.backgroundColor = "#007bff"; btn.style.color = "#fff";
         }
     </script>
 </body>
