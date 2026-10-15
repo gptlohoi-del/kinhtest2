@@ -1160,20 +1160,16 @@
         }
 
         async function initApp() {
-            // Gỡ bỏ Service Worker cũ (sw.js) để trình duyệt không dùng lại danh sách bài cũ trong cache
-            if ('serviceWorker' in navigator) {
+            // Đăng ký Service Worker (sw.js) để chạy Offline và tự động cập nhật bản mới
+            if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
                 try {
-                    const registrations = await navigator.serviceWorker.getRegistrations();
-                    for (const reg of registrations) {
-                        await reg.unregister();
-                    }
-                    if (window.caches) {
-                        const keys = await caches.keys();
-                        for (const k of keys) await caches.delete(k);
-                    }
-                } catch (e) {}
+                    await navigator.serviceWorker.register('./sw.js');
+                } catch (e) {
+                    console.log('Lỗi đăng ký Offline:', e);
+                }
             }
 
+            loadSavedFontSizeSettings();
             loadSavedFontSizeSettings();
 
             const onPC = isRunningOnPC();
